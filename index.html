@@ -1,0 +1,121 @@
+<!-- 
+    This page handles the request from zoho, reconstructs the parameters and send to webpay
+ -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoho Books</title>
+    <style>
+        #container{
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        img{
+            width: 150px;
+            height: auto
+        }
+        p{
+            font-family: sans-serif; 
+            color: #fff;
+            background-color: rgb(59, 59, 59);
+            padding: 0 10px
+        }
+        
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <p>Redirecting...</p>
+        <div>
+            <img src='https://www.interswitchgroup.com/assets/images/home/interswitch_logo.svg' />
+        </div>
+    </div>
+
+    <script>
+    const basePath = 'https://switch-zoho.herokuapp.com';
+    let url = new URL(location.href);
+    let testEndpoint = 'https://webpay-ui.k8.isw.la/collections/w/pay';
+
+    function searchParams(param) {
+        return url.searchParams.get(param)
+    }
+
+    function setAttributes(element, attributes) {
+        for (let key in attributes) {
+            element.setAttribute(key, attributes[key]);
+        }
+    }
+
+    function createInputElement(name, value, type = 'text', hidden = 'hidden') {
+        let input = document.createElement('input');
+        setAttributes(input, {
+            name,
+            type,
+            value,
+            hidden
+        })
+        return input
+    }
+
+
+
+    
+
+
+    let [merchantCode, payItemId] = searchParams('account_id').split('.');
+    
+    let fields = {
+        site_redirect_url: basePath + '/redirect.php',//searchParams('payment_complete_url'),
+        amount: searchParams('amount') * 100,
+        cust_name: searchParams('first_name') + ' ' + searchParams('last_name'),
+        txn_ref: searchParams('reference_id'),
+        currency: 566,
+        merchant_code: merchantCode,
+        pay_item_id: payItemId
+    }
+
+
+    /* 
+    *   These params are required for a request and must be arranged in alphabtical order.
+    *   Some parts of the alorithm depend on this arrangement. Hence, do not re-arrange!
+    **/
+    let redirectUrlParams = '?amount=' + fields.amount/100 + 
+    '&gateway_reference_id=' + fields.txn_ref + '&payment_mode=card' + '&payment_complete_url=' + searchParams('payment_complete_url') ;
+
+    /**
+     * Interswitch performs HTML entities hash on every request parameter, hence it becomes inaccessible 
+     * on the redirect page. I encoded the parameters in base64, to be decoded on the redirect page.
+     * */
+    let hashedRedirectUrlParams = btoa(redirectUrlParams);
+    fields.site_redirect_url = fields.site_redirect_url + '/' + hashedRedirectUrlParams;
+
+
+    let containerElement = document.querySelector('#container');
+    let formElement = document.createElement('form')
+    setAttributes(formElement, {
+        method: 'POST',
+        action: testEndpoint
+    })
+
+    for (let key in fields) {
+        let input = createInputElement(key, fields[key]);
+        formElement.append(input);
+    }
+
+    let buttonElement = document.createElement('button');
+    containerElement.append(formElement);
+    formElement.submit();
+
+    </script>
+</body>
+
+</html>
