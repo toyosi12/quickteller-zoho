@@ -71,7 +71,7 @@
     
 
 
-    let [merchantCode, payItemId] = searchParams('account_id').split('.');
+    let [merchantCode, payItemId] = searchParams('account_id').split(':');
     
     let fields = {
         site_redirect_url: basePath + '/redirect.php',//searchParams('payment_complete_url'),
@@ -87,9 +87,13 @@
     /* 
     *   These params are required for a request and must be arranged in alphabtical order.
     *   Some parts of the alorithm depend on this arrangement. Hence, do not re-arrange!
+    *   Again, do not rearrange, except you know what you're doing.
+    *   The function 'stringBetween() in redirect.php depends so much on this arrangement.'
     **/
     let redirectUrlParams = '?amount=' + fields.amount/100 + 
-    '&gateway_reference_id=' + fields.txn_ref + '&payment_mode=card' + '&payment_complete_url=' + searchParams('payment_complete_url') ;
+    '&gateway_reference_id=' + fields.txn_ref + '&payment_mode=card&account_id=' 
+        +  searchParams('account_id') + '&payment_complete_url=' 
+        + searchParams('payment_complete_url');
 
     /**
      * Interswitch performs HTML entities hash on every request parameter, hence it becomes inaccessible 
