@@ -52,18 +52,46 @@ if ($_POST['resp'] == '00') {
     curl_setopt($curlInit, CURLOPT_URL, $requeryUrl);
     $response = json_decode(curl_exec($curlInit));
     curl_close($curlInit);
-    if ($response->ResponseCode == '00') {
+    if ($response->ResponseCode == '00' || $response->ResponseCode == '11') {
         $transactionStatus = 1;
     } else {
         $transactionStatus = 0;
+        $gatewayErrorCode = $response->ResponseCode;
+        $zcmErrorCode = 101;
     }
 } else {
     $transactionStatus = 0;
+    if ($_POST['resp'] == '14') {
+        $transactionStatus = 0;
+        $gatewayErrorCode = $_POST['resp'];
+        $zcmErrorCode = 105;
+    } elseif ($_POST['resp'] == '56') {
+        $transactionStatus = 0;
+        $gatewayErrorCode = $_POST['resp'];
+        $zcmErrorCode = 107;
+    } else {
+        $transactionStatus = 0;
+        $gatewayErrorCode = $_POST['resp'];
+        $zcmErrorCode = 101;
+    }
 }
 $modQueryString .= 'transaction_status' . $transactionStatus;
 
 
-$signature = hash_hmac('sha256', $modQueryString, $payItemId);
-$queryString .= '&transaction_status=' . $transactionStatus . '&signature=' . $signature;
+if ($transactionStatus === 1) {
+    $signature = hash_hmac('sha256', $modQueryString, $payItemId);
+    $queryString .= '&transaction_status=' . $transactionStatus . '&signature=' . $signature;
+} else {
+    $modQueryString .= 'zcm_errorcode' . $zcmErrorCode;
+    $position = strpos($modQueryString, 'gateway_reference_id');
+    $modQueryString = substr_replace($modQueryString, 'gateway_errorcode' . $gatewayErrorCode, $position, 0);
+    $signature = hash_hmac('sha256', $modQueryString, $payItemId);
+    $queryString .= '&transaction_status=' . $transactionStatus . '&zcm_errorcode=' . $zcmErrorCode .
+                    '&gateway_errorcode=' . $gatewayErrorCode . '&signature=' . $signature;
+    //. '&gateway_errorcode=' . $gatewayErrorCode . '&zcm_errorcode=' . $zcmErrorCode;
+}
+
+
+
 
 header('Location: ' . $redirectUrl . $queryString);

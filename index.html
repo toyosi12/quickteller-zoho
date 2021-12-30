@@ -3,123 +3,177 @@
  -->
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Zoho Books</title>
     <style>
-        #container{
-            display: flex;
-            justify-content: center;
-            height: 100vh;
-            align-items: center;
-            flex-direction: column;
-        }
+      #container {
+        display: flex;
+        justify-content: center;
+        height: 100vh;
+        align-items: center;
+        flex-direction: column;
+      }
 
-        img{
-            width: 150px;
-            height: auto
-        }
-        p{
-            font-family: sans-serif; 
-            color: #fff;
-            background-color: rgb(59, 59, 59);
-            padding: 0 10px
-        }
-        
+      img {
+        width: 150px;
+        height: auto;
+      }
+      p {
+        font-family: sans-serif;
+        color: #fff;
+        background-color: rgb(59, 59, 59);
+        padding: 0 10px;
+      }
     </style>
-</head>
+  </head>
 
-<body>
+  <body>
     <div id="container">
-        <p>Redirecting...</p>
-        <div>
-            <img src='https://www.interswitchgroup.com/assets/images/home/interswitch_logo.svg' />
-        </div>
+      <p>Redirecting...</p>
+      <div>
+        <img
+          src="https://www.interswitchgroup.com/assets/images/home/interswitch_logo.svg"
+        />
+      </div>
     </div>
 
     <script>
-    const basePath = 'https://switch-zoho.herokuapp.com';
-    let url = new URL(location.href);
-    let testEndpoint = 'https://webpay-ui.k8.isw.la/collections/w/pay';
+      // 5060990580000217499 03/50 1111 111 123456
+      // https://switch-zoho.herokuapp.com/test
+      const basePath =
+        location.hostname === "localhost" || location.hostname === "127.0.0.1"
+          ? "http://127.0.0.1:8000"
+          : "https://switch-zoho.herokuapp.com";
+      let url = new URL(location.href);
+      let endpoint; // = "https://webpay-ui.k8.isw.la/collections/w/pay";
+      if (url.searchParams.get("env")) {
+        let env = url.searchParams.get("env");
+        endpoint =
+          env === "test"
+            ? "https://webpay-ui.k8.isw.la/collections/w/pay"
+            : "https://newwebpay.interswitchng.com/collections/w/pay";
+      } else {
+        alert("Could not detect test or live");
+      }
 
-    function searchParams(param) {
-        return url.searchParams.get(param)
-    }
+      function searchParams(param) {
+        return url.searchParams.get(param);
+      }
 
-    function setAttributes(element, attributes) {
+      function setAttributes(element, attributes) {
         for (let key in attributes) {
-            element.setAttribute(key, attributes[key]);
+          element.setAttribute(key, attributes[key]);
         }
-    }
+      }
 
-    function createInputElement(name, value, type = 'text', hidden = 'hidden') {
-        let input = document.createElement('input');
+      function createInputElement(
+        name,
+        value,
+        type = "text",
+        hidden = "hidden"
+      ) {
+        let input = document.createElement("input");
         setAttributes(input, {
-            name,
-            type,
-            value,
-            hidden
-        })
-        return input
-    }
+          name,
+          type,
+          value,
+          hidden,
+        });
+        return input;
+      }
 
+      let [merchantCode, payItemId] = searchParams("account_id").split(":");
 
-
-    
-
-
-    let [merchantCode, payItemId] = searchParams('account_id').split(':');
-    
-    let fields = {
-        site_redirect_url: basePath + '/redirect.php',//searchParams('payment_complete_url'),
-        amount: searchParams('amount') * 100,
-        cust_name: searchParams('first_name') + ' ' + searchParams('last_name'),
-        txn_ref: searchParams('reference_id'),
+      let fields = {
+        site_redirect_url: basePath + "/redirect.php", //searchParams('payment_complete_url'),
+        amount: searchParams("amount") * 100,
+        cust_name: searchParams("first_name") + " " + searchParams("last_name"),
+        txn_ref: searchParams("reference_id"),
         currency: 566,
         merchant_code: merchantCode,
-        pay_item_id: payItemId
-    }
+        pay_item_id: payItemId,
+      };
 
+      /*
+       *   These params are required for a request and must be arranged in alphabtical order.
+       *   Some parts of the alorithm depend on this arrangement. Hence, do not re-arrange!
+       *   Again, do not rearrange, except you know what you're doing.
+       *   The function 'stringBetween() in redirect.php depends so much on this arrangement.'
+       **/
+      let redirectUrlParams =
+        "?amount=" +
+        fields.amount / 100 +
+        "&gateway_reference_id=" +
+        fields.txn_ref +
+        "&payment_mode=card&account_id=" +
+        searchParams("account_id") +
+        "&payment_complete_url=" +
+        searchParams("payment_complete_url");
 
-    /* 
-    *   These params are required for a request and must be arranged in alphabtical order.
-    *   Some parts of the alorithm depend on this arrangement. Hence, do not re-arrange!
-    *   Again, do not rearrange, except you know what you're doing.
-    *   The function 'stringBetween() in redirect.php depends so much on this arrangement.'
-    **/
-    let redirectUrlParams = '?amount=' + fields.amount/100 + 
-    '&gateway_reference_id=' + fields.txn_ref + '&payment_mode=card&account_id=' 
-        +  searchParams('account_id') + '&payment_complete_url=' 
-        + searchParams('payment_complete_url');
+      /**
+       * Interswitch performs HTML entities hash on every request parameter, hence it becomes inaccessible
+       * on the redirect page. I encoded the parameters in base64, to be decoded on the redirect page.
+       * */
+      let hashedRedirectUrlParams = btoa(redirectUrlParams);
+      fields.site_redirect_url =
+        fields.site_redirect_url + "/" + hashedRedirectUrlParams;
 
-    /**
-     * Interswitch performs HTML entities hash on every request parameter, hence it becomes inaccessible 
-     * on the redirect page. I encoded the parameters in base64, to be decoded on the redirect page.
-     * */
-    let hashedRedirectUrlParams = btoa(redirectUrlParams);
-    fields.site_redirect_url = fields.site_redirect_url + '/' + hashedRedirectUrlParams;
+      let containerElement = document.querySelector("#container");
+      let formElement = document.createElement("form");
+      setAttributes(formElement, {
+        method: "POST",
+        action: endpoint,
+      });
 
-
-    let containerElement = document.querySelector('#container');
-    let formElement = document.createElement('form')
-    setAttributes(formElement, {
-        method: 'POST',
-        action: testEndpoint
-    })
-
-    for (let key in fields) {
+      for (let key in fields) {
         let input = createInputElement(key, fields[key]);
         formElement.append(input);
-    }
+      }
 
-    let buttonElement = document.createElement('button');
-    containerElement.append(formElement);
-    formElement.submit();
+      let buttonElement = document.createElement("button");
+      containerElement.append(formElement);
 
+      async function validateSignature() {
+        let _params = window.location.search.replace("?", "");
+        let params = new URLSearchParams(_params);
+        let zohoSignature = params.get("signature");
+        params.delete("env");
+        params.delete("signature");
+        params.sort();
+        sortedParams = decodeURIComponent(params.toString());
+        let paramsWithoutEqualsAndAmpersand = sortedParams.replace(/&|=/g, "");
+        let modParams = paramsWithoutEqualsAndAmpersand.replace(
+          /order_id/,
+          "order_id="
+        );
+
+        console.log(modParams);
+
+        const rawResponse = await fetch("./verify_signature.php", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            modParams,
+            payItemId,
+            zohoSignature,
+          }),
+        });
+        const response = await rawResponse.json();
+        console.log(response);
+        if (response.success) {
+          // formElement.submit();
+        } else {
+          let redirectUrl = params.get("payment_complete_url");
+          //location.href = redirectUrl + "?zcm_errorcode=" + 124;
+        }
+      }
+      validateSignature();
     </script>
-</body>
-
+  </body>
 </html>
