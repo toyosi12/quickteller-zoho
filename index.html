@@ -47,20 +47,19 @@
         location.hostname === "localhost" || location.hostname === "127.0.0.1"
           ? "http://127.0.0.1:8000"
           : "https://switch-zoho.herokuapp.com";
-      let url = new URL(location.href);
+
+      let _params = window.location.search.replace("?", "");
+      let params = new URLSearchParams(_params);
+
       let endpoint; // = "https://webpay-ui.k8.isw.la/collections/w/pay";
-      if (url.searchParams.get("env")) {
-        let env = url.searchParams.get("env");
+      if (params.get("env")) {
+        let env = params.get("env");
         endpoint =
           env === "test"
             ? "https://webpay-ui.k8.isw.la/collections/w/pay"
             : "https://newwebpay.interswitchng.com/collections/w/pay";
       } else {
         alert("Could not detect test or live");
-      }
-
-      function searchParams(param) {
-        return url.searchParams.get(param);
       }
 
       function setAttributes(element, attributes) {
@@ -85,13 +84,13 @@
         return input;
       }
 
-      let [merchantCode, payItemId] = searchParams("account_id").split(":");
+      let [merchantCode, payItemId] = params.get("account_id").split(":");
 
       let fields = {
-        site_redirect_url: basePath + "/redirect.php", //searchParams('payment_complete_url'),
-        amount: searchParams("amount") * 100,
-        cust_name: searchParams("first_name") + " " + searchParams("last_name"),
-        txn_ref: searchParams("reference_id"),
+        site_redirect_url: basePath + "/redirect.php",
+        amount: params.get("amount") * 100,
+        cust_name: params.get("first_name") + " " + params.get("last_name"),
+        txn_ref: params.get("reference_id"),
         currency: 566,
         merchant_code: merchantCode,
         pay_item_id: payItemId,
@@ -109,9 +108,9 @@
         "&gateway_reference_id=" +
         fields.txn_ref +
         "&payment_mode=card&account_id=" +
-        searchParams("account_id") +
+        params.get("account_id") +
         "&payment_complete_url=" +
-        searchParams("payment_complete_url");
+        params.get("payment_complete_url");
 
       /**
        * Interswitch performs HTML entities hash on every request parameter, hence it becomes inaccessible
@@ -137,8 +136,6 @@
       containerElement.append(formElement);
 
       async function validateSignature() {
-        let _params = window.location.search.replace("?", "");
-        let params = new URLSearchParams(_params);
         let zohoSignature = params.get("signature");
         params.delete("env");
         params.delete("signature");
@@ -149,8 +146,6 @@
           /order_id/,
           "order_id="
         );
-
-        console.log(modParams);
 
         const rawResponse = await fetch("./verify_signature.php", {
           method: "POST",
@@ -167,10 +162,20 @@
         const response = await rawResponse.json();
         console.log(response);
         if (response.success) {
-          // formElement.submit();
+          formElement.submit();
         } else {
           let redirectUrl = params.get("payment_complete_url");
-          //location.href = redirectUrl + "?zcm_errorcode=" + 124;
+          location.href =
+            redirectUrl +
+            "?amount=" +
+            params.get("amount") +
+            "&gateway_reference_id=" +
+            params.get("reference_id") +
+            "&payment_mode=" +
+            params.get("payment_mode") +
+            "&transaction_status=0&zcm_errorcode=101" +
+            "&signature=" +
+            zohoSignature;
         }
       }
       validateSignature();

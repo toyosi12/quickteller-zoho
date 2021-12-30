@@ -33,7 +33,7 @@ $queryString = str_replace('&account_id=' . $accountId, '', $queryString);
 $modQueryString = preg_replace('/&|\?|=/', '', $queryString);
 
 $transactionStatus;
-$transactionReference = stringBetween($queryString, '&gateway_reference_id=', '&payment_mode=card');
+$transactionReference = stringBetween($queryString, '&gateway_reference_id=', '&payment_mode');
 $transactionReference = str_replace('gateway_reference_id=', '', $transactionReference);
 
 $amount = stringBetween($queryString, '?amount=', '&gateway_reference_id=');
