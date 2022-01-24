@@ -143,7 +143,8 @@
         params.delete("signature");
         params.sort();
         sortedParams = decodeURIComponent(params.toString());
-        sortedParams = sortedParams.replace(/\+/, " ");
+        sortedParams = sortedParams.replace(/\+/g, " ");
+        console.log(sortedParams);
         let paramsWithoutEqualsAndAmpersand = sortedParams.replace(/&|=/g, "");
         let modParams = paramsWithoutEqualsAndAmpersand.replace(
           /order_id/,
