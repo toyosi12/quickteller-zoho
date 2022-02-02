@@ -81,6 +81,15 @@ $modQueryString .= 'transaction_status' . $transactionStatus;
 if ($transactionStatus === 1) {
     $signature = hash_hmac('sha256', $modQueryString, $payItemId);
     $queryString .= '&transaction_status=' . $transactionStatus . '&signature=' . $signature;
+
+     //callback in case browser is called before browser redirect or bad internet.
+    $curlInit = curl_init();
+    curl_setopt($curlInit, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($curlInit, CURLOPT_URL, $redirectUrl . $queryString);
+    curl_setopt($curlInit, CURLOPT_POST, 1);
+    $response = json_decode(curl_exec($curlInit));
+    curl_close($curlInit);
+   
 } else {
     $modQueryString .= 'zcm_errorcode' . $zcmErrorCode;
     $position = strpos($modQueryString, 'gateway_reference_id');

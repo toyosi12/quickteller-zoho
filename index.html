@@ -144,7 +144,6 @@
         params.sort();
         sortedParams = decodeURIComponent(params.toString());
         sortedParams = sortedParams.replace(/\+/g, " ");
-        console.log(sortedParams);
         let paramsWithoutEqualsAndAmpersand = sortedParams.replace(/&|=/g, "");
         let modParams = paramsWithoutEqualsAndAmpersand.replace(
           /order_id/,
@@ -164,7 +163,6 @@
           }),
         });
         const response = await rawResponse.json();
-        console.log(response);
         if (response.success) {
           formElement.submit();
         } else {
