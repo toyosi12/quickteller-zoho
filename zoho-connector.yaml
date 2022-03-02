@@ -1,0 +1,51 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: zoho-connector
+  name: zoho-connector
+spec:
+  progressDeadlineSeconds: 180
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: zoho-connector
+  template:
+    metadata:
+      labels:
+        app: zoho-connector
+    spec:
+      containers:
+        - env:
+          image: "repo.isw.la/zoho-connector:${buildVersion}"
+          imagePullPolicy: IfNotPresent
+          name: zoho-connector
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          resources:
+            limits:
+              cpu: "2"
+              memory: 4Gi
+            requests:
+              cpu: 1024m
+              memory: 1Gi
+      dnsPolicy: ClusterFirst
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    f5.service.default.access: external
+  labels:
+    app: zoho-connector
+  name: zoho-connector
+spec:
+  ports:
+    - name: default
+      port: 80
+      targetPort: 80
+  selector:
+    app: zoho-connector
